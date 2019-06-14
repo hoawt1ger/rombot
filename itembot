@@ -1,0 +1,733 @@
+openapi: 3.0.0
+info:
+  version: "1.1.6"
+  title: "Poporing Life"
+  x-logo:
+    url: https://static.poporing.life/logomax.jpg
+    backgroundColor: #FFFFFF
+    altText: Poporing Life Logo
+  description: |
+
+    New API Console is Live!
+    https://poporing.life/api-docs/console.html
+
+    # Introduction
+
+    This is a Guide for using Poporing Life API.
+    You're free to do whatever you want with the data,
+    whether it's data analysis webapp, smart chatbot,
+    or auto refresh price in your profit calculation spreadsheet.
+    As long as it adheres to the guideline below, we're good.
+
+    # Usage Guide
+
+    - **No cache busting**
+
+      Do not append cache busting url like **?_=timestamp**.
+      We rely on having a URL exactly matched.
+      See FAQ for more info.
+
+    - **Cache what you pulled**
+
+      If you pulled a large amount of data in a short time for processing,
+      stored them on your own server. A small on-demand request, like bot response,
+      do not need a cache.
+
+    - **Limit your usage**
+
+      We don't currently have hard limit for API request.
+      Please treat it as if you own the website and use it sparingly.
+
+    - **Don't hotlink or cross-origin request**
+
+      Don't directly hotlink the item images or call our API directly from your publicly-accesible webapp.
+
+    - **Credit on a public site/bot/spreadsheet**
+
+      You must include a link back to our website, atrributing us as a data source, somewhere on a webapp,
+      or in a bot help command.
+
+    - **Naming**
+
+      Try not to confuse people whether your site/bot is an official one from us.
+
+    # FAQ
+
+    - **Do I need to pay?**
+
+      No
+
+    - **You mean I can use these API for free?**
+
+      Yes
+
+    - **What about older data**
+
+      We don't have a plan to publicize those API, yet.
+
+    - **What about other Premium Feature. How can I get an auth key?**
+
+      We don't have a plan to publicize those API, yet.
+
+    - **Data won't refresh without cache buster**
+
+      Don't forget to add **Origin** header to your request with either
+      **https://poporing.life** or **https://global.poporing.life**
+
+      *Example code*
+
+      ```
+      axios.get("https://api.poporing.life/get_latest_price/jellopy", {
+          headers: {
+              "Origin": "https://poporing.life",
+          }
+      }).then(response => {
+          // Do something with that data
+      });
+      ```
+  termsOfService: "https://poporing.life/?page=terms"
+  contact:
+    url: "https://poporing.life/"
+  license:
+    name: "MIT"
+    url: "https://opensource.org/licenses/MIT"
+tags:
+- name: "METADATA"
+  description: "Item Metadata"
+- name: "LATEST DATA"
+  description: "Item price and volume data"
+- name: "HISTORY DATA"
+  description: "Item price and volume data for the past"
+servers:
+- url: "https://api.poporing.life"
+  description: "SEA Server API"
+- url: "https://api-global.poporing.life"
+  description: "Global Server API"
+paths:
+  /get_item_list:
+    get:
+      tags:
+      - "METADATA"
+      summary: "List of all item"
+      description: "List of all item tracked by Poporing Life"
+      parameters:
+      - in: header
+        name: Origin
+        schema:
+          type: string
+          enum: ["https://poporing.life", "https://global.poporing.life"]
+        required: true
+        example: "https://poporing.life"
+        description: "Use appropriate origin for either api.poporing.life or api-global.poporing.life"
+      - in: query
+        name: includeRefine
+        schema:
+          type: integer
+          enum: [0, 1]
+        required: false
+        example: "0"
+        description: "Should output include all combination of refine/broken items as individual pieces, default to 0"
+      - in: query
+        name: includeCategory
+        schema:
+          type: string
+        required: false
+        example: ""
+        description: "Should filter item that belongs to certain category, default to no filter, see https://gist.github.com/bongikairu/b14ca7a97948e7f4afe54a04ec71f24b for current list"
+      responses:
+        200:
+          description: "Success Response"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: "Success Flag"
+                  data:
+                    type: object
+                    description: "Return Data"
+                    properties:
+                      item_list:
+                        type: array
+                        description: "List of Item"
+                        items:
+                          $ref: "#/components/schemas/ItemMetadata"
+  /get_trending_list:
+    get:
+      tags:
+      - "METADATA"
+      summary: "List of trending item"
+      parameters:
+      - in: header
+        name: Origin
+        schema:
+          type: string
+          enum: ["https://poporing.life", "https://global.poporing.life"]
+        required: true
+        example: "https://poporing.life"
+        description: "Use appropriate origin for either api.poporing.life or api-global.poporing.life"
+      responses:
+        200:
+          description: "Success Response"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: "Success Flag"
+                  data:
+                    type: object
+                    description: "Return Data"
+                    properties:
+                      item_list:
+                        type: array
+                        description: "List of Trending Item : Top Trending"
+                        items:
+                          $ref: "#/components/schemas/TrendingItemData"
+                      item_list_full_1day:
+                        type: array
+                        description: "List of Trending Item : Highest Change in 1 day and haven't appeared above"
+                        items:
+                          $ref: "#/components/schemas/TrendingItemData"
+                      item_list_full_3day:
+                        type: array
+                        description: "List of Trending Item : Highest Change in 3 day and haven't appeared above"
+                        items:
+                          $ref: "#/components/schemas/TrendingItemData"
+                      item_list_full_7day:
+                        type: array
+                        description: "List of Trending Item : Highest Change in 7 day and haven't appeared above"
+                        items:
+                          $ref: "#/components/schemas/TrendingItemData"
+  /get_latest_price/{item_name}:
+    get:
+      tags:
+      - "LATEST DATA"
+      summary: "Latest Data of an item"
+      description: "Get the latest data of an item"
+      parameters:
+      - in: header
+        name: Origin
+        schema:
+          type: string
+          enum: ["https://poporing.life", "https://global.poporing.life"]
+        required: true
+        example: "https://poporing.life"
+        description: "Use appropriate origin for either api.poporing.life or api-global.poporing.life"
+      - name: item_name
+        in: path
+        description: "Item Internal Tracking Name"
+        required: true
+        example: "awakening_potion"
+        schema:
+          type: string
+      - in: query
+        name: mini
+        schema:
+          type: integer
+          enum: [0, 1]
+        required: false
+        example: "0"
+        description: "Should exclude price/volume difference data, default to 0"
+      responses:
+        200:
+          description: "Success Response"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: "Success Flag"
+                  data:
+                    type: object
+                    description: "Return Data"
+                    properties:
+                      item_name:
+                        type: string
+                        description: "Item Internal Tracking Name"
+                      data:
+                        $ref: "#/components/schemas/ItemData"
+  /get_latest_prices:
+    get:
+      tags:
+      - "LATEST DATA"
+      summary: "Latest Data of multiple items"
+      description: |
+        Get the latest data of 1-128 items in a batch.
+
+        List of item is specified in json-encoded query string, like `https://api.poporing.life/get_latest_prices?body=%5B%22apple_juice%22%2C%22rainbow_carrot%22%5D`.
+
+        Note: POST version below is preferred to using GET.
+
+        Trick: If you want the whole category, use `/get_all_latest_prices` with `?includeCategory=:xxx`
+      parameters:
+      - in: header
+        name: Origin
+        schema:
+          type: string
+          enum: ["https://poporing.life", "https://global.poporing.life"]
+        required: true
+        example: "https://poporing.life"
+        description: "Use appropriate origin for either api.poporing.life or api-global.poporing.life"
+      - in: query
+        name: body
+        schema:
+          type: string
+        required: true
+        description: "JSON-encoded array of items to get their data, encoded for query string"
+        example: '["apple_juice","rainbow_carrot"]'
+      - in: query
+        name: mini
+        schema:
+          type: integer
+          enum: [0, 1]
+        example: "0"
+        required: false
+        description: "Should exclude price/volume difference data, default to 0"
+      responses:
+        200:
+          description: "Success Response"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: "Success Flag"
+                  data:
+                    type: array
+                    description: "List of Item Data"
+                    items:
+                      properties:
+                        item_name:
+                          type: string
+                          description: "Item Internal Tracking Name"
+                        data:
+                          $ref: "#/components/schemas/ItemData"
+    post:
+      tags:
+      - "LATEST DATA"
+      summary: "Latest Data of multiple items"
+      description: |
+        Get the latest data of 1-128 items in a batch
+
+        Trick: If you want the whole category, use `/get_all_latest_prices` with `?includeCategory=:xxx`
+      parameters:
+      - in: header
+        name: Origin
+        schema:
+          type: string
+          enum: ["https://poporing.life", "https://global.poporing.life"]
+        required: true
+        example: "https://poporing.life"
+        description: "Use appropriate origin for either api.poporing.life or api-global.poporing.life"
+      - in: query
+        name: mini
+        schema:
+          type: integer
+          enum: [0, 1]
+        required: false
+        example: "0"
+        description: "Should exclude price/volume difference data, default to 0"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example:
+            - awakening_potion
+            - shining_stone
+            schema:
+              type: array
+              description: "Array of items to get their data"
+              minItems: 1
+              maxItems: 8
+              items:
+                type: string
+                description: "Item Internal Tracking Name"
+      responses:
+        200:
+          description: "Success Response"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: "Success Flag"
+                  data:
+                    type: array
+                    description: "List of Item Data"
+                    items:
+                      properties:
+                        item_name:
+                          type: string
+                          description: "Item Internal Tracking Name"
+                        data:
+                          $ref: "#/components/schemas/ItemData"
+        400:
+          description: |
+            Bad request
+
+            This could be many things, common one is the
+            - JSON post body is malformed (If you didn't use built-in JSON serializer from your programming language, check it on https://jsonlint.com/ )
+            - You put JSON post body in Form Data instead of Raw Post Body (`requests.post('/get_latest_prices', data=to_check_list)` instead of `requests.post('/get_latest_prices', json=to_check_list)`)
+            - You POST request to http instead of https
+
+  /get_all_latest_prices:
+    get:
+      tags:
+      - "LATEST DATA"
+      summary: "Latest Data of all items"
+      description: "Get the latest data of all item"
+      parameters:
+      - in: header
+        name: Origin
+        schema:
+          type: string
+          enum: ["https://poporing.life", "https://global.poporing.life"]
+        required: true
+        example: "https://poporing.life"
+        description: "Use appropriate origin for either api.poporing.life or api-global.poporing.life"
+      - in: query
+        name: mini
+        schema:
+          type: integer
+          enum: [0, 1]
+        required: false
+        example: "1"
+        description: "Should exclude price/volume difference data, default to 1"
+      - in: query
+        name: item_data
+        schema:
+          type: integer
+          enum: [0, 1]
+        required: false
+        example: "0"
+        description: "Should include item_data from get_item_list for each item, default to 0"
+      - in: query
+        name: includeRefine
+        schema:
+          type: integer
+          enum: [0, 1]
+        required: false
+        example: "0"
+        description: "Should output include all combination of refine/broken items as individual pieces, default to 0"
+      - in: query
+        name: includeCategory
+        schema:
+          type: string
+        required: false
+        example: ""
+        description: "Should filter item that belongs to certain category, default to no filter, see https://gist.github.com/bongikairu/b14ca7a97948e7f4afe54a04ec71f24b for current list"
+      responses:
+        200:
+          description: "Success Response"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: "Success Flag"
+                  data:
+                    type: array
+                    description: "List of Item Data"
+                    items:
+                      properties:
+                        item_name:
+                          type: string
+                          description: "Item Internal Tracking Name"
+                        data:
+                          $ref: "#/components/schemas/ItemData"
+                        item_data:
+                          $ref: "#/components/schemas/ItemMetadata"
+  /get_price_history/{item_name}:
+    get:
+      tags:
+      - "HISTORY DATA"
+      summary: "Data History of an item"
+      description: "Get the data points of an item for the last 7 days"
+      parameters:
+      - in: header
+        name: Origin
+        schema:
+          type: string
+          enum: ["https://poporing.life", "https://global.poporing.life"]
+        required: true
+        example: "https://poporing.life"
+        description: "Use appropriate origin for either api.poporing.life or api-global.poporing.life"
+      - name: item_name
+        in: path
+        description: "Item Internal Tracking Name"
+        required: true
+        example: "awakening_potion"
+        schema:
+          type: string
+      responses:
+        200:
+          description: "Success Response"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: "Success Flag"
+                  data:
+                    type: object
+                    description: "Return Data"
+                    properties:
+                      item_name:
+                        type: string
+                        description: "Item Internal Tracking Name"
+                      data_list:
+                        type: array
+                        description: "List of data point for this item, sort by timestamp from latest"
+                        items:
+                          type: object
+                          description: "Item Data"
+                          properties:
+                            price:
+                              type: integer
+                              description: "Latest price, 0 or less means data not available"
+                            volume:
+                              type: integer
+                              description: "Latest Volume, 0 or less means data not available"
+                            timestamp:
+                              type: integer
+                              description: "Data Timestamp in UNIX Timestamp format"
+                            snapping:
+                              type: integer
+                              description: "Second until snapping will end, relative to the timestamp. -1 means no snapping occured."
+  /get_price_summary/{item_name}:
+    get:
+      tags:
+      - "HISTORY DATA"
+      summary: "Daily Data History of an item"
+      description: "Get the daily data history of an item for the last 30 days"
+      parameters:
+      - in: header
+        name: Origin
+        schema:
+          type: string
+          enum: ["https://poporing.life", "https://global.poporing.life"]
+        required: true
+        example: "https://poporing.life"
+        description: "Use appropriate origin for either api.poporing.life or api-global.poporing.life"
+      - name: item_name
+        in: path
+        description: "Item Internal Tracking Name"
+        required: true
+        example: "awakening_potion"
+        schema:
+          type: string
+      responses:
+        200:
+          description: "Success Response"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: "Success Flag"
+                  data:
+                    type: object
+                    description: "Return Data"
+                    properties:
+                      item_name:
+                        type: string
+                        description: "Item Internal Tracking Name"
+                      data_list:
+                        type: array
+                        description: "List of daily data point for this item, sort by date from today backward"
+                        items:
+                          type: object
+                          description: "Item Data"
+                          properties:
+                            date:
+                              type: integer
+                              description: "Date of data in format of YYYYMMDD"
+                            timestamp:
+                              type: integer
+                              description: "Calculation Timestamp in UNIX Timestamp format"
+                            open:
+                              type: integer
+                              description: "Opening price of that day"
+                            close:
+                              type: integer
+                              description: "Closing price of that day"
+                            high:
+                              type: integer
+                              description: "Highest price of that day"
+                            low:
+                              type: integer
+                              description: "Lowest price of that day"
+                            volume_open:
+                              type: integer
+                              description: "Opening price of that day"
+                            volume_close:
+                              type: integer
+                              description: "Closing price of that day"
+                            volume_high:
+                              type: integer
+                              description: "Highest price of that day"
+                            volume_low:
+                              type: integer
+                              description: "Lowest price of that day"
+  /get_source_image/{item_name}/{timestamp}:
+    get:
+      tags:
+      - "HISTORY DATA"
+      summary: "Get source image of a data point of an item"
+      description: "Get the source image of any data point in the last 7 days"
+      parameters:
+      - in: header
+        name: Origin
+        schema:
+          type: string
+          enum: ["https://poporing.life", "https://global.poporing.life"]
+        required: true
+        example: "https://poporing.life"
+        description: "Use appropriate origin for either api.poporing.life or api-global.poporing.life"
+      - name: item_name
+        in: path
+        description: "Item Internal Tracking Name"
+        required: true
+        example: "awakening_potion"
+        schema:
+          type: string
+      - name: timestamp
+        in: path
+        description: "Data point timestamp"
+        required: true
+        example: "1555430782"
+        schema:
+          type: integer
+      - in: query
+        name: redirect
+        schema:
+          type: integer
+          enum: [0, 1]
+        required: false
+        example: "0"
+        description: "Response with 302 Redirect to the source image instead of JSON of url, default to 0 (not redirect)"
+      responses:
+        200:
+          description: "Success Response when redirect=0"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: "Success Flag"
+                  data:
+                    type: object
+                    description: "Return Data"
+                    properties:
+                      item_name:
+                        type: string
+                        description: "Item Internal Tracking Name"
+                      source_image:
+                        type: string
+                        description: "URL of the image, timestamp-signed for 10 minutes"
+        302:
+          description: "Success Response when redirect=1"
+          headers:
+            Location:
+              type: "string"
+              description: "URL of the image, timestamp-signed for 10 minutes"
+
+components:
+  schemas:
+    ItemMetadata:
+      type: object
+      description: "Item Metadata"
+      properties:
+        name:
+          type: string
+          description: "Item Internal Tracking Name"
+        display_name:
+          type: string
+          description: "Item Display Name"
+        item_type:
+          type: string
+          description: "Item Type"
+        update_priority:
+          type: string
+          enum: ["", "Low", "Medium", "High"]
+        alt_display_name_list:
+          type: array
+          description: "List of alternative display name"
+          items:
+            type: string
+        image_url:
+          type: string
+          description: "Image Url, Non-null image can be accessed by prepending **https://static.poporing.life/items/**. Please do not hotlink the image for you webapp."
+          nullable: true
+    TrendingItemData:
+      type: object
+      description: "Trending Item Data"
+      properties:
+        name:
+          type: string
+          description: "Item Internal Tracking Name"
+        display_name:
+          type: string
+          description: "Item Display Name"
+        score:
+          type: float
+          description: "Internal score used for ordering"
+    ItemData:
+      type: object
+      description: "Item Data"
+      properties:
+        price:
+          type: integer
+          description: "Latest price, 0 or less means data not available"
+        volume:
+          type: integer
+          description: "Latest Volume, 0 or less means data not available"
+        timestamp:
+          type: integer
+          description: "Data Timestamp in UNIX Timestamp format"
+        snapping:
+          type: integer
+          description: "Second until snapping will end, relative to the timestamp. -1 means no snapping occured."
+        last_known_price:
+          type: integer
+          description: "If an item is unavailable, these data will be available for easy access. Last Known Price."
+        last_known_timestamp:
+          type: integer
+          description: "If an item is unavailable, these data will be available for easy access. Last Known Timestamp, 0 means no last known data available."
+        change1day:
+          type: float
+          description: "Percentage of difference of price between latest price and 1 day ago, -1000000 means not available"
+        change3day:
+          type: float
+          description: "Percentage of difference of price between latest price and 3 days ago, -1000000 means not available"
+        change7day:
+          type: float
+          description: "Percentage of difference of price between latest price and 7 days ago, -1000000 means not available"
+        vchange1day:
+          type: float
+          description: "Percentage of difference of volume between latest volume and 1 day ago, -1000000 means not available"
+        vchange3day:
+          type: float
+          description: "Percentage of difference of volume between latest volume and 3 days ago, -1000000 means not available"
+        vchange7day:
+          type: float
+          description: "Percentage of difference of volume between latest volume and 7 days ago, -1000000 means not available"
